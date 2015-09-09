@@ -1,16 +1,18 @@
 import processing.serial.*;
 import gausstoys.core.*;
 import ddf.minim.*;
-
+import gifAnimation.*;
 // Libraries
-final AudioPlayer player;
-final Minim minim; // audio context
-final GaussSense gs;
+AudioPlayer player;
+Minim minim; // audio context
+GaussSense gs;
 
 // Image
-final PImage bg_img;
+PImage bg_img;
+Gif highlight0Gif;
+Gif highlight1Gif;
 final String img_path_prefix = "ChineseChess-";
-final String bg_img_path = img_path_prefix + "Board.jpg";
+final String bg_img_path = img_path_prefix + "Board.png";
 PImage img;
 
 // Constant
@@ -19,15 +21,15 @@ final int window_height = 625;
 final int row = 4;
 final int col = 8;
 final int dist = 125; 
-final int chess_size = 120;
+final int chess_size = 90;
 final int chess_num = row*col;
 final int token_num = 14;
 final int rank_arr[] = {0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6};
-final int tags[][] = {{73, 12}, {105, -100}, {-119, 111}, {-87, -82}, {-119, -65}, {9, 26},   {-103, 55}, // Red team rank from 0 to 6  
+final int tags[][] = {{73, 12}, {105, -100}, {-119, 111}, {-87, -82}, {-119, -65}, {9, -26},   {-103, 55}, // Red team rank from 0 to 6  
                       {89, 48}, {-55, -68},  {-39, 74},   {-7, -118}, {-23, -98},  {-39, 90}, {57, -106}};  // Blue team rank from 6 to 0
 // int tags[][] = {{-103, 55}, {9, -26}, {-119, -65}, {-87, -82}, {-119, 111}, {105, -100}, {73,12},
 //                {57, -106}, {-39, 90}, {-23, -98}, {-7, -118}, {-39, 74}, {-55, -68}, {89, 48}};
-final PVector start = new PVector(4,129);
+final PVector start = new PVector(15,145);
 final PVector board_pos[][] = new PVector[row][col];
 
 // Status
@@ -38,9 +40,10 @@ boolean key_mode_team = false;
 int key_mode_rank;
 
 // Chess, Board and Token
-final Chess chessList[] = new Chess[chess_num];
-final Board boardList[][] = new Board[row][col];
-final GaussToken tokenList[] = new GaussToken[token_num];
+Chess chessList[] = new Chess[chess_num];
+Board boardList[][] = new Board[row][col];
+GaussToken tokenList[] = new GaussToken[token_num];
+GaussToken lastToken = null;
 
 
 class GaussToken {
@@ -56,15 +59,15 @@ class GaussToken {
 }
 
 class Board {
-  final PVector pos;
+  PVector pos;
   boolean isEmpty;
   Chess who;
 }
 
 class Chess {
-  final PVector pos;
-  final boolean team;
-  final int rank;
+  PVector pos;
+  boolean team;
+  int rank;
   boolean isFlip;
   boolean isDead;
 
@@ -78,17 +81,18 @@ class Chess {
   public void setPosition(PVector pos){
     this.pos = pos;
   }
-  public void flip(boolean team, int rank){
-    if(this.team == team && this.rank == rank){
-      this.isFlip = true;
-    }
-  }
+
 }
 
 void setup() {
   size(window_width, window_height);
   bg_img = loadImage(bg_img_path);
-
+  
+  highlight0Gif = new Gif(this, "ChineseChess-Highlight0.gif");
+  highlight0Gif.loop();
+  highlight1Gif = new Gif(this, "ChineseChess-Highlight1.gif");
+  highlight1Gif.loop();
+  
   //Initialize the Music Player
   minim = new Minim(this);
   
@@ -102,6 +106,7 @@ void setup() {
     chessList[i] = new Chess(true, rank_arr[i]);
     chessList[rank_arr.length + i] = new Chess(false, rank_arr[i]);
   }
+
 
   // set boardList
   for (int i = 0; i < row; i++) {
@@ -121,8 +126,8 @@ void setup() {
 
   // set tokenList
   for (int i = 0; i < token_num/2; i++) {
-    tokenList[i] = new GaussToken(false, i, tags[i][0], tags[i][1]);
-    tokenList[token_num/2 + i] = new GaussToken(true, i, tags[i][0], tags[i][1]);
+    tokenList[i] = new GaussToken(true, i, tags[i][0], tags[i][1]);
+    tokenList[token_num/2 + i] = new GaussToken(false, i, tags[token_num/2 + i][0], tags[token_num/2 + i][1]);
   }
 }
 
@@ -137,19 +142,19 @@ void draw() {
   gs.setUpsampledData2D(this.width, this.height, upsampleFactor);
   GData pBipolarMidpoint = gs.getBipolarMidpoint(thld);
   
-  int tokenOnStage;
-  boolean teamOnStage;
-  int rankOnStage;
+  int tokenOnStage = -1;
+  boolean teamOnStage = false;
+  int rankOnStage = -1;
 
   if(gs.isTagOn()) {
     // GaussToken is on the GaussStage 
     int[] tag = gs.getTagID();
     String str = "Tag: "+tag[0]+", "+tag[1]+", "+tag[2]+", "+tag[3]+", "+tag[4];
-    println(str);
+//    println(str);
     float angleInRad = (float) pBipolarMidpoint.getAngle(); //Get the angle of roll. Unit: Rad
     int angleInDegree = (int) degrees(angleInRad); //Turn the rad into degree
     angleInDegree = angleInDegree+180; // map degree to 0~360
-    println(angleInDegree);
+//    println(angleInDegree);
     
     if (angleInDegree > 225 && angleInDegree < 315)
       direction = Direction.UP;
@@ -159,15 +164,49 @@ void draw() {
       direction = Direction.DOWN;
     else 
       direction = Direction.LEFT;
-    println(angleInDegree + ":" + direction);
+//    println(angleInDegree + ":" + direction);
 
     tokenOnStage = whosOnStage(tag);
-    teamOnStage = tokenList[tokenOnStage].team;
-    rankOnStage = tokenList[tokenOnStage].rank;
-    println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
+    
+    if(tokenOnStage != -1){
+      teamOnStage = tokenList[tokenOnStage].team;
+      rankOnStage = tokenList[tokenOnStage].rank;
+    
+//      println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
 
-    flipSameRankChess(teamOnStage, rankOnStage);
-    isOnStage = true;
+      flipSameRankChess(teamOnStage, rankOnStage);
+      if(lastToken == tokenList[tokenOnStage] && isOnStage == false){
+        println("moved");
+        for (int i = 0; i < chess_num; i++) {
+          if (chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
+            switch (direction) {
+              case UP: 
+                chess_move(chessList[i], new PVector(-1, 0));
+                break;
+    
+              case DOWN: 
+                chess_move(chessList[i], new PVector(1, 0));
+                break;
+    
+              case LEFT: 
+                chess_move(chessList[i], new PVector(0, -1));
+                break;
+    
+              case RIGHT: 
+                chess_move(chessList[i], new PVector(0, 1));
+                break;
+    
+              default: 
+                break;
+            }
+          }
+        }
+      }
+
+      isOnStage = true;
+      lastToken = tokenList[tokenOnStage];
+    }
+    
     
   }
   else if(isOnStage == true){
@@ -175,30 +214,7 @@ void draw() {
     println("jump");
     println(direction);
     isOnStage = false;
-    for (int i = 0; i < chess_num; i++) {
-      if (chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
-        switch (direction) {
-          case UP: 
-            chess_move(chessList[i], new PVector(-1, 0));
-            break;
-
-          case DOWN: 
-            chess_move(chessList[i], new PVector(1, 0));
-            break;
-
-          case LEFT: 
-            chess_move(chessList[i], new PVector(0, -1));
-            break;
-
-          case RIGHT: 
-            chess_move(chessList[i], new PVector(0, 1));
-            break;
-
-          default: 
-            break;
-        }
-      }
-    }
+    
     
   }
   
@@ -216,12 +232,22 @@ void draw() {
       // Draw ALL Chesses
       int team = chessList[i].team?1:0;
       String str = img_path_prefix + team + chessList[i].rank +".png";
+      if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage){
+        pushStyle ();
+        if(teamOnStage == false)
+          image (highlight0Gif, boardList[x][y].pos.x-20, boardList[x][y].pos.y-20, chess_size+40, chess_size+40);
+        else
+          image (highlight1Gif, boardList[x][y].pos.x-20, boardList[x][y].pos.y-20, chess_size+40, chess_size+40);
+        popStyle ();
+      }
+      
       pushStyle ();
       img = loadImage (str);
       image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
       popStyle ();
       // Draw Only ONE Diretion Indicator
       if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
+    
         switch (direction) {
           case RIGHT: 
             img = loadImage (img_path_prefix + "right.png");
@@ -252,7 +278,7 @@ void draw() {
   if((who_won != -1) && !victory){
       player = minim.loadFile("victory.mp3", 2048);
       player.play();
-      println("team" + whowon + " won the game!");
+      println("team" + who_won + " won the game!");
       victory = true;
   }
 }
@@ -306,7 +332,7 @@ boolean chess_attack(Chess killer, Chess victim){
       // kill the smaller except king cannot kill the smallest
       victim.isDead = true;
     }
-    else if (who.rank == 0 && enemy.rank == 6) {
+    else if (killer.rank == 0 && victim.rank == 6) {
       // kill the king
       victim.isDead = true;   
     }
@@ -316,11 +342,13 @@ boolean chess_attack(Chess killer, Chess victim){
 
 void flipSameRankChess (boolean team, int rank) {
   for (int i = 0; i < chess_num; i++) {
+    
     if (chessList[i].team == team && chessList[i].rank == rank) {
       if (!chessList[i].isFlip) {
         player = minim.loadFile("flip.wav", 2048);
         player.play();
         chessList[i].isFlip = true;
+        
       }
     }
   }
@@ -329,7 +357,7 @@ void flipSameRankChess (boolean team, int rank) {
 // Return the found index of tags array
 int whosOnStage (int readtag[]) {
   for (int i = 0; i < token_num; i++) {
-    if (readtag[0] == tokenList.tag[0] && readtag[1] == tokenList[1]){
+    if (readtag[0] == tokenList[i].tag[0] && readtag[1] == tokenList[i].tag[1]){
       return i;
     }
   }
@@ -347,9 +375,9 @@ int checkWin () {
       team1_win = true;
     }
   }
-  if (team0_win)
+  if (!team0_win)
     return 0;
-  else if (team1_win)
+  else if (!team1_win)
     return 1;
   return -1;
 }
@@ -357,7 +385,7 @@ int checkWin () {
 // Key mode for debugging
 void keyPressed () { 
   if (key >= '0' && key <= '6') {
-    key_mode_rank = Character.getNumericValue(key.charAt(0));;
+    key_mode_rank = Character.getNumericValue(key);;
     flipSameRankChess(key_mode_team, key_mode_rank);  
   }
   else if (key == 't') {
