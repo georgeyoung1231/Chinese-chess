@@ -11,7 +11,7 @@ GaussSense gs;
 PImage bg_img;
 Gif highlight0Gif;
 Gif highlight1Gif;
-final String img_path_prefix = "ChineseChess-";
+final String img_path_prefix = "ChineseChessNew-";
 final String bg_img_path = img_path_prefix + "Board.png";
 PImage img;
 
