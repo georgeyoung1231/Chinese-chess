@@ -2,6 +2,8 @@ import processing.serial.*;
 import gausstoys.core.*;
 import ddf.minim.*;
 import gifAnimation.*;
+import de.looksgood.ani.*;
+
 // Libraries
 AudioPlayer player;
 Minim minim; // audio context
@@ -29,6 +31,7 @@ final int tags[][] = {{73, 12}, {105, -100}, {-119, 111}, {-87, -82}, {-119, -65
                       {89, 48}, {-55, -68},  {-39, 74},   {-7, -118}, {-23, -98},  {-39, 90}, {57, -106}};  // Blue team rank from 6 to 0
 // int tags[][] = {{-103, 55}, {9, -26}, {-119, -65}, {-87, -82}, {-119, 111}, {105, -100}, {73,12},
 //                {57, -106}, {-39, 90}, {-23, -98}, {-7, -118}, {-39, 74}, {-55, -68}, {89, 48}};
+float ani_x = 0, ani_y = 0;
 final PVector start = new PVector(15,145);
 final PVector board_pos[][] = new PVector[row][col];
 
@@ -70,6 +73,7 @@ class Chess {
   int rank;
   boolean isFlip;
   boolean isDead;
+  boolean isMoving;
 
   public Chess(boolean team, int rank){
     this.team = team;
@@ -77,6 +81,7 @@ class Chess {
     this.isFlip = false;
     this.rank = rank;
     this.pos = null;
+    this.isMoving = false;
   }
   public void setPosition(PVector pos){
     this.pos = pos;
@@ -129,12 +134,13 @@ void setup() {
     tokenList[i] = new GaussToken(true, i, tags[i][0], tags[i][1]);
     tokenList[token_num/2 + i] = new GaussToken(false, i, tags[token_num/2 + i][0], tags[token_num/2 + i][1]);
   }
+  
+  Ani.init(this);
 }
 
 void draw() {
   background(0);
   image(bg_img, 0, 0, window_width, window_height);
-  
   // GaussStage
   float thld = 5; //Unit: Gauss
   //Get bipolar midpoint data
@@ -240,11 +246,17 @@ void draw() {
           image (highlight1Gif, boardList[x][y].pos.x-20, boardList[x][y].pos.y-20, chess_size+40, chess_size+40);
         popStyle ();
       }
+      if(chessList[i].isMoving){
+        if(ani_x == boardList[x][y].pos.x && ani_y == boardList[x][y].pos.y)
+          chessList[i].isMoving = false;
+        img = loadImage (str);
+        image (img, ani_x, ani_y, chess_size, chess_size);
+      }
+      else{
+        img = loadImage (str);
+        image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
+      }
       
-      pushStyle ();
-      img = loadImage (str);
-      image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
-      popStyle ();
       // Draw Only ONE Diretion Indicator
       if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
     
@@ -294,6 +306,11 @@ boolean chess_move(Chess who, PVector direction){
       // next grid is empty/movable
       player = minim.loadFile("marching.mp3", 2048);
       player.play();
+      ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
+      ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
+      Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
+      Ani.to(this, 1.5, "ani_y", boardList[x][y].pos.y);
+      who.isMoving =   ;
       boardList[(int)who.pos.x][(int)who.pos.y].isEmpty = true;
       boardList[(int)who.pos.x][(int)who.pos.y].who = null;
       who.pos.x = x;
@@ -306,6 +323,11 @@ boolean chess_move(Chess who, PVector direction){
       // attack successfully
       player = minim.loadFile("eat.wav", 2048);
       player.play();
+      ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
+      ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
+      Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
+      Ani.to(this, 1.5, "ani_y", boardList[x][y].pos.y);
+      who.isMoving = true;
       boardList[(int)who.pos.x][(int)who.pos.y].isEmpty = true;
       boardList[(int)who.pos.x][(int)who.pos.y].who = null;
       who.pos.x = x;
@@ -314,7 +336,7 @@ boolean chess_move(Chess who, PVector direction){
       boardList[x][y].isEmpty = false;
       println("team: " + boardList[x][y].who.team + "rank: " + boardList[x][y].who.rank + "is killed!");
       gs.setVibrator(true);
-      delay(1000);
+//      delay(1000);
       gs.setVibrator(false);
       return true;
     }
@@ -419,3 +441,8 @@ void keyPressed () {
     }
   }
 } 
+
+void mouseReleased() {
+    // animate the variables x and y in 1.5 sec to mouse click position
+    
+}
