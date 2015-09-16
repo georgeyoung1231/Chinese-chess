@@ -5,8 +5,8 @@ import gifAnimation.*;
 import de.looksgood.ani.*;
 
 // Libraries
-// AudioPlayer player;
-// Minim minim; // audio context
+//AudioPlayer player;
+//Minim minim; // audio context
 GaussSense gs;
 
 // Image
@@ -31,7 +31,7 @@ final int tags[][] = {{73, 12}, {105, -100}, {-119, 111}, {-87, -82}, {-119, -65
                       {89, 48}, {-55, -68},  {-39, 74},   {-7, -118}, {-23, -98},  {-39, 90}, {57, -106}};  // Blue team rank from 6 to 0
 // int tags[][] = {{-103, 55}, {9, -26}, {-119, -65}, {-87, -82}, {-119, 111}, {105, -100}, {73,12},
 //                {57, -106}, {-39, 90}, {-23, -98}, {-7, -118}, {-39, 74}, {-55, -68}, {89, 48}};
-float ani_x = 0, ani_y = 0;
+// float ani_x[] = new float[32], ani_y[] = new float[32];
 final PVector start = new PVector(15,145);
 final PVector board_pos[][] = new PVector[row][col];
 
@@ -74,7 +74,7 @@ class Chess {
   boolean isFlip;
   boolean isDead;
   boolean isMoving;
-
+  float ani_x, ani_y;
   public Chess(boolean team, int rank){
     this.team = team;
     this.isDead = false;
@@ -100,7 +100,7 @@ void setup() {
   highlight1Gif.loop();
   
   //Initialize the Music Player
-  // minim = new Minim(this);
+//  minim = new Minim(this);
   
   //Initialize the GaussSense
   GaussSense.printSerialPortList();
@@ -111,6 +111,7 @@ void setup() {
   for (int i = 0; i < rank_arr.length; i++) {
     chessList[i] = new Chess(true, rank_arr[i]);
     chessList[rank_arr.length + i] = new Chess(false, rank_arr[i]);
+    
   }
 
 
@@ -179,7 +180,7 @@ void draw() {
       teamOnStage = tokenList[tokenOnStage].team;
       rankOnStage = tokenList[tokenOnStage].rank;
     
-//      println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
+      println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
 
       flipSameRankChess(teamOnStage, rankOnStage);
       if(lastToken == tokenList[tokenOnStage] && isOnStage == false){
@@ -245,13 +246,15 @@ void draw() {
         popStyle ();
       }
       if(chessList[i].isMoving){
-        if(ani_x == boardList[x][y].pos.x && ani_y == boardList[x][y].pos.y)
+        if(chessList[i].ani_x == boardList[x][y].pos.x && chessList[i].ani_y == boardList[x][y].pos.y)
           chessList[i].isMoving = false;
         img = loadImage (str);
-        image (img, ani_x, ani_y, chess_size, chess_size);
+        image (img, chessList[i].ani_x, chessList[i].ani_y, chess_size, chess_size);
       }
       else{
         img = loadImage (str);
+        if(img == null)
+          println("img:"+img);
         image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
       }
       
@@ -302,22 +305,14 @@ boolean chess_move(Chess who, PVector direction){
     // inside the board
     if(boardList[x][y].isEmpty){
       // next grid is empty/movable
-<<<<<<< HEAD
-      // player = minim.loadFile("marching.mp3", 2048);
-      // player.play();
-=======
-      player = minim.loadFile("marching.mp3", 2048);
-      player.play();
->>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
-      ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
-      ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
-      Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
-      Ani.to(this, 1.5, "ani_y", boardList[x][y].pos.y);
-<<<<<<< HEAD
+
+//      player = minim.loadFile("marching.mp3", 2048);
+//      player.play();
+      who.ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
+      who.ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
+      Ani.to(who, 1.5, "ani_x", boardList[x][y].pos.x);
+      Ani.to(who, 1.5, "ani_y", boardList[x][y].pos.y);
       who.isMoving = true;
-=======
-      who.isMoving =   ;
->>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
       boardList[(int)who.pos.x][(int)who.pos.y].isEmpty = true;
       boardList[(int)who.pos.x][(int)who.pos.y].who = null;
       who.pos.x = x;
@@ -329,18 +324,16 @@ boolean chess_move(Chess who, PVector direction){
     }
     else if((boardList[x][y].who!=null) && chess_attack(who, boardList[x][y].who)){
       // attack successfully
-<<<<<<< HEAD
-      // player = minim.loadFile("eat.wav", 2048);
-      // player.play();
+
       println(boardList[x][y].who.team + "r" + boardList[x][y].who.rank + " is killed by " + who.team + "r" + who.rank);
-=======
-      player = minim.loadFile("eat.wav", 2048);
-      player.play();
->>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
-      ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
-      ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
-      Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
-      Ani.to(this, 1.5, "ani_y", boardList[x][y].pos.y);
+
+//      player = minim.loadFile("eat.wav", 2048);
+//      player.play();
+
+      who.ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
+      who.ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
+      Ani.to(who, 1.5, "ani_x", boardList[x][y].pos.x);
+      Ani.to(who, 1.5, "ani_y", boardList[x][y].pos.y);
       who.isMoving = true;
       boardList[(int)who.pos.x][(int)who.pos.y].isEmpty = true;
       boardList[(int)who.pos.x][(int)who.pos.y].who = null;
@@ -382,8 +375,8 @@ void flipSameRankChess (boolean team, int rank) {
     
     if (chessList[i].team == team && chessList[i].rank == rank) {
       if (!chessList[i].isFlip) {
-        // player = minim.loadFile("flip.wav", 2048);
-        // player.play();
+//        player = minim.loadFile("flip.wav", 2048);
+//        player.play();
         chessList[i].isFlip = true;
         
       }
@@ -468,8 +461,6 @@ void keyPressed () {
 void mouseReleased() {
     // animate the variables x and y in 1.5 sec to mouse click position
     
-<<<<<<< HEAD
+
 }
-=======
-}
->>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
+
