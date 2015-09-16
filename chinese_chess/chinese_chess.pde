@@ -5,8 +5,8 @@ import gifAnimation.*;
 import de.looksgood.ani.*;
 
 // Libraries
-//AudioPlayer player;
-//Minim minim; // audio context
+AudioPlayer player;
+Minim minim; // audio context
 GaussSense gs;
 
 // Image
@@ -27,11 +27,10 @@ final int chess_size = 90;
 final int chess_num = row*col;
 final int token_num = 14;
 final int rank_arr[] = {0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6};
-final int tags[][] = {{73, 12}, {105, -100}, {-119, 111}, {-87, -82}, {-119, -65}, {9, -26},   {-103, 55}, // Red team rank from 0 to 6  
-                      {89, 48}, {-55, -68},  {-39, 74},   {-7, -118}, {-23, -98},  {-39, 90}, {57, -106}};  // Blue team rank from 6 to 0
-// int tags[][] = {{-103, 55}, {9, -26}, {-119, -65}, {-87, -82}, {-119, 111}, {105, -100}, {73,12},
-//                {57, -106}, {-39, 90}, {-23, -98}, {-7, -118}, {-39, 74}, {-55, -68}, {89, 48}};
-// float ani_x[] = new float[32], ani_y[] = new float[32];
+final int tags[][] = {{89, 48}, {-39, 56},  {-39, 74},   {-7, -118}, {-23, -98},  {57, -106}, {105, -81}, // Blue team rank from 0 to 6
+                      {73, 12}, {-55, 52}, {-119, 111}, {-87, -82}, {-119, -65}, {9, -26},   {-103, 55}   // Red team rank from 0 to 6  
+                     };  
+
 final PVector start = new PVector(15,145);
 final PVector board_pos[][] = new PVector[row][col];
 
@@ -41,6 +40,7 @@ boolean isOnStage = false;
 boolean victory = false;
 boolean key_mode_team = false;
 int key_mode_rank;
+boolean turn = false;
 
 // Chess, Board and Token
 Chess chessList[] = new Chess[chess_num];
@@ -100,7 +100,7 @@ void setup() {
   highlight1Gif.loop();
   
   //Initialize the Music Player
-//  minim = new Minim(this);
+  minim = new Minim(this);
   
   //Initialize the GaussSense
   GaussSense.printSerialPortList();
@@ -158,7 +158,7 @@ void draw() {
     // GaussToken is on the GaussStage 
     int[] tag = gs.getTagID();
     String str = "Tag: "+tag[0]+", "+tag[1]+", "+tag[2]+", "+tag[3]+", "+tag[4];
-//    println(str);
+    println(str);
     float angleInRad = (float) pBipolarMidpoint.getAngle(); //Get the angle of roll. Unit: Rad
     int angleInDegree = (int) degrees(angleInRad); //Turn the rad into degree
     angleInDegree = angleInDegree+180; // map degree to 0~360
@@ -179,42 +179,45 @@ void draw() {
     if(tokenOnStage != -1){
       teamOnStage = tokenList[tokenOnStage].team;
       rankOnStage = tokenList[tokenOnStage].rank;
-    
-      println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
-
-      flipSameRankChess(teamOnStage, rankOnStage);
-      if(lastToken == tokenList[tokenOnStage] && isOnStage == false){
-        for (int i = 0; i < chess_num; i++) {
-          if (chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
-            switch (direction) {
-              case UP: 
-                chess_move(chessList[i], new PVector(-1, 0));
-                break;
-    
-              case DOWN: 
-                chess_move(chessList[i], new PVector(1, 0));
-                break;
-    
-              case LEFT: 
-                chess_move(chessList[i], new PVector(0, -1));
-                break;
-    
-              case RIGHT: 
-                chess_move(chessList[i], new PVector(0, 1));
-                break;
-    
-              default: 
-                break;
+      if(teamOnStage == turn){
+        println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
+  
+        boolean flipSuccess = flipSameRankChess(teamOnStage, rankOnStage);
+        boolean chessMovable = chess_movable(teamOnStage, rankOnStage);
+        if(flipSuccess && !chessMovable){
+          turn = !turn;
+        }
+        if(lastToken == tokenList[tokenOnStage] && isOnStage == false && chessMovable){
+          for (int i = 0; i < chess_num; i++) {
+            if (chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
+              switch (direction) {
+                case UP: 
+                  chess_move(chessList[i], new PVector(-1, 0));
+                  break;
+      
+                case DOWN: 
+                  chess_move(chessList[i], new PVector(1, 0));
+                  break;
+      
+                case LEFT: 
+                  chess_move(chessList[i], new PVector(0, -1));
+                  break;
+      
+                case RIGHT: 
+                  chess_move(chessList[i], new PVector(0, 1));
+                  break;
+      
+                default: 
+                  break;
+              }
             }
           }
+          turn = !turn;
         }
+        isOnStage = true;
+        lastToken = tokenList[tokenOnStage];
       }
-
-      isOnStage = true;
-      lastToken = tokenList[tokenOnStage];
     }
-    
-    
   }
   else if(isOnStage == true){
     // Once ever on stage, now jump down
@@ -289,8 +292,8 @@ void draw() {
   // Game Result
   int who_won = checkWin(); 
   if((who_won != -1) && !victory){
-      // player = minim.loadFile("victory.mp3", 2048);
-      // player.play();
+      player = minim.loadFile("victory.mp3", 2048);
+      player.play();
       println("team" + who_won + " won the game!");
       victory = true;
   }
@@ -306,8 +309,8 @@ boolean chess_move(Chess who, PVector direction){
     if(boardList[x][y].isEmpty){
       // next grid is empty/movable
 
-//      player = minim.loadFile("marching.mp3", 2048);
-//      player.play();
+      player = minim.loadFile("marching.mp3", 2048);
+      player.play();
       who.ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
       who.ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
       Ani.to(who, 1.5, "ani_x", boardList[x][y].pos.x);
@@ -327,8 +330,8 @@ boolean chess_move(Chess who, PVector direction){
 
       println(boardList[x][y].who.team + "r" + boardList[x][y].who.rank + " is killed by " + who.team + "r" + who.rank);
 
-//      player = minim.loadFile("eat.wav", 2048);
-//      player.play();
+      player = minim.loadFile("eat.wav", 2048);
+      player.play();
 
       who.ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
       who.ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
@@ -355,6 +358,47 @@ boolean chess_move(Chess who, PVector direction){
   return false;
 }
 
+boolean chess_movable(boolean team, int rank) {
+  for(int i = 0; i < chess_num; i++){
+    if(chessList[i].team == team && chessList[i].rank == rank){
+      if(chess_movable_helper(chessList[i], new PVector(1, 0)) 
+      || chess_movable_helper(chessList[i], new PVector(0, 1)) 
+      || chess_movable_helper(chessList[i], new PVector(-1,0))
+      || chess_movable_helper(chessList[i], new PVector(0,-1)))
+        return true;
+    }     
+  }
+  return false;
+}
+boolean chess_movable_helper(Chess who, PVector direction){
+  int x = (int)(who.pos.x + direction.x);
+  int y = (int)(who.pos.y + direction.y);
+  if(x < row && y < col && x >= 0 && y >= 0){ 
+    if(boardList[x][y].isEmpty){
+      return true;
+    }
+    else if(boardList[x][y].who!=null){
+      Chess killer = who;
+      Chess victim = boardList[x][y].who;
+      if (killer.isFlip && victim.isFlip && killer.team != victim.team) {
+        if ((killer.rank >= victim.rank) && !(killer.rank == 6 && victim.rank == 0)) {
+          // kill the smaller except king cannot kill the smallest
+          return true;
+        }
+        else if (killer.rank == 0 && victim.rank == 6) {
+          // kill the king
+          return true;   
+        }
+      }
+      return false;
+    }
+    else{
+      return false;
+    }
+  }
+  return false;
+}
+
 boolean chess_attack(Chess killer, Chess victim){
   // return attack success or not
   if (killer.isFlip && victim.isFlip && killer.team != victim.team) {
@@ -370,18 +414,19 @@ boolean chess_attack(Chess killer, Chess victim){
   return victim.isDead;
 }
 
-void flipSameRankChess (boolean team, int rank) {
+boolean flipSameRankChess (boolean team, int rank) {
+  boolean flipSuccess = false;
   for (int i = 0; i < chess_num; i++) {
-    
     if (chessList[i].team == team && chessList[i].rank == rank) {
       if (!chessList[i].isFlip) {
-//        player = minim.loadFile("flip.wav", 2048);
-//        player.play();
-        chessList[i].isFlip = true;
-        
+        player = minim.loadFile("flip.wav", 2048);
+        player.play();
+        chessList[i].isFlip = true; 
+        flipSuccess = true;
       }
     }
   }
+  return flipSuccess;
 }
 
 // Return the found index of tags array
