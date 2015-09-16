@@ -302,13 +302,22 @@ boolean chess_move(Chess who, PVector direction){
     // inside the board
     if(boardList[x][y].isEmpty){
       // next grid is empty/movable
+<<<<<<< HEAD
       // player = minim.loadFile("marching.mp3", 2048);
       // player.play();
+=======
+      player = minim.loadFile("marching.mp3", 2048);
+      player.play();
+>>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
       ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
       ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
       Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
       Ani.to(this, 1.5, "ani_y", boardList[x][y].pos.y);
+<<<<<<< HEAD
       who.isMoving = true;
+=======
+      who.isMoving =   ;
+>>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
       boardList[(int)who.pos.x][(int)who.pos.y].isEmpty = true;
       boardList[(int)who.pos.x][(int)who.pos.y].who = null;
       who.pos.x = x;
@@ -320,9 +329,14 @@ boolean chess_move(Chess who, PVector direction){
     }
     else if((boardList[x][y].who!=null) && chess_attack(who, boardList[x][y].who)){
       // attack successfully
+<<<<<<< HEAD
       // player = minim.loadFile("eat.wav", 2048);
       // player.play();
       println(boardList[x][y].who.team + "r" + boardList[x][y].who.rank + " is killed by " + who.team + "r" + who.rank);
+=======
+      player = minim.loadFile("eat.wav", 2048);
+      player.play();
+>>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
       ani_x = boardList[(int)who.pos.x][(int)who.pos.y].pos.x;
       ani_y = boardList[(int)who.pos.x][(int)who.pos.y].pos.y;
       Ani.to(this, 1.5, "ani_x", boardList[x][y].pos.x);
@@ -454,4 +468,8 @@ void keyPressed () {
 void mouseReleased() {
     // animate the variables x and y in 1.5 sec to mouse click position
     
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> a019b61396fe6190a8b7059b1f96eee06e88d7e0
