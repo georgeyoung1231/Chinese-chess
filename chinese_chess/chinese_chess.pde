@@ -22,7 +22,7 @@ final int window_width = 1000;
 final int window_height = 625;
 final int row = 4;
 final int col = 8;
-final int dist = 125; 
+final int dist = 118; 
 final int chess_size = 90;
 final int chess_num = row*col;
 final int token_num = 14;
@@ -31,7 +31,7 @@ final int tags[][] = {{89, 48}, {-39, 56},  {-39, 74},   {-7, -118}, {-23, -98},
                       {73, 12}, {-55, 52}, {-119, 111}, {-87, -82}, {-119, -65}, {9, -26},   {-103, 55}   // Red team rank from 0 to 6  
                      };  
 
-final PVector start = new PVector(15,145);
+final PVector start = new PVector(43,140);
 final PVector board_pos[][] = new PVector[row][col];
 
 // Status
@@ -64,6 +64,7 @@ class GaussToken {
 class Board {
   PVector pos;
   boolean isEmpty;
+  boolean isMovable;
   Chess who;
 }
 
@@ -74,6 +75,7 @@ class Chess {
   boolean isFlip;
   boolean isDead;
   boolean isMoving;
+  boolean eatable;
   float ani_x, ani_y;
   public Chess(boolean team, int rank){
     this.team = team;
@@ -82,6 +84,7 @@ class Chess {
     this.rank = rank;
     this.pos = null;
     this.isMoving = false;
+    this.eatable = false;
   }
   public void setPosition(PVector pos){
     this.pos = pos;
@@ -153,7 +156,14 @@ void draw() {
   int tokenOnStage = -1;
   boolean teamOnStage = false;
   int rankOnStage = -1;
-
+  for (int i = 0; i < row; i++) {
+    for (int j = 0; j < col; j++) {
+      boardList[i][j].isMovable = false;
+    }
+  }
+  for (int i = 0; i < chess_num; i++) {
+    chessList[i].eatable = false;
+  }
   if(gs.isTagOn()) {
     // GaussToken is on the GaussStage 
     int[] tag = gs.getTagID();
@@ -179,11 +189,15 @@ void draw() {
     if(tokenOnStage != -1){
       teamOnStage = tokenList[tokenOnStage].team;
       rankOnStage = tokenList[tokenOnStage].rank;
+      
+//      chess_eatable(teamOnStage, rankOnStage);
+      
       if(teamOnStage == turn){
         println("Now on GaussStage: token" + tokenOnStage + " team:" + teamOnStage + "rank: " + rankOnStage);
   
         boolean flipSuccess = flipSameRankChess(teamOnStage, rankOnStage);
         boolean chessMovable = chess_movable(teamOnStage, rankOnStage);
+        
         if(flipSuccess && !chessMovable){
           turn = !turn;
         }
@@ -242,10 +256,13 @@ void draw() {
       String str = img_path_prefix + team + chessList[i].rank +".png";
       if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage){
         pushStyle ();
-        if(teamOnStage == false)
-          image (highlight0Gif, boardList[x][y].pos.x-10, boardList[x][y].pos.y-10, chess_size+20, chess_size+20);
-        else
-          image (highlight1Gif, boardList[x][y].pos.x-10, boardList[x][y].pos.y-10, chess_size+20, chess_size+20);
+//        if(teamOnStage == false)
+//          image (highlight0Gif, boardList[x][y].pos.x-10, boardList[x][y].pos.y-10, chess_size+20, chess_size+20);
+//        else
+//          image (highlight1Gif, boardList[x][y].pos.x-10, boardList[x][y].pos.y-10, chess_size+20, chess_size+20);
+        noStroke();
+        fill(244,228,81,128);  
+        rect(boardList[x][y].pos.x-10, boardList[x][y].pos.y-10, chess_size+20, chess_size+20); // Drawing the rectangle
         popStyle ();
       }
       if(chessList[i].isMoving){
@@ -260,24 +277,29 @@ void draw() {
           println("img:"+img);
         image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
       }
+      //chess eatable
       
       // Draw Only ONE Diretion Indicator
-      if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage) {
-    
+      if (gs.isTagOn() && chessList[i].rank == rankOnStage && chessList[i].team == teamOnStage && teamOnStage == turn) {
+
         switch (direction) {
           case RIGHT: 
+            chess_eatable_helper(chessList[i], new PVector(0, 1));
             img = loadImage (img_path_prefix + "right.png");
             break;
           
           case UP:
+            chess_eatable_helper(chessList[i], new PVector(-1, 0));
             img = loadImage (img_path_prefix + "up.png");
             break;
           
           case LEFT: 
+            chess_eatable_helper(chessList[i], new PVector(0, -1));
             img = loadImage (img_path_prefix + "left.png");
             break;
           
           case DOWN: 
+            chess_eatable_helper(chessList[i], new PVector(1, 0));
             img = loadImage (img_path_prefix + "down.png");
             break;
           
@@ -285,7 +307,22 @@ void draw() {
             break;
         }
         image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
+      }
+      if(gs.isTagOn() && chessList[i].eatable){
+        img = loadImage ("chess_eatable.png");
+        image (img, boardList[x][y].pos.x, boardList[x][y].pos.y, chess_size, chess_size);
       }  
+    }
+  }
+  for (int i = 0; i < row; i++) {
+    for (int j = 0; j < col; j++) {
+      if(boardList[i][j].isMovable && teamOnStage == turn){
+        pushStyle();
+        noStroke();
+        fill(18,224,112,128);  
+        rect(boardList[i][j].pos.x-10, boardList[i][j].pos.y-10, chess_size+20, chess_size+20); // Drawing the rectangle
+        popStyle ();
+      }
     }
   }
 
@@ -357,7 +394,45 @@ boolean chess_move(Chess who, PVector direction){
   }
   return false;
 }
-
+void chess_eatable(boolean team, int rank){
+  
+  for(int i = 0; i < chess_num; i++){
+    if(chessList[i].team == team && chessList[i].rank == rank && !chessList[i].isDead){
+      chess_eatable_helper(chessList[i], new PVector(1, 0));
+      chess_eatable_helper(chessList[i], new PVector(0, 1)); 
+      chess_eatable_helper(chessList[i], new PVector(-1,0));
+      chess_eatable_helper(chessList[i], new PVector(0,-1));
+    }
+  }
+  return;
+}
+void chess_eatable_helper(Chess who, PVector direction){
+  int x = (int)(who.pos.x + direction.x);
+  int y = (int)(who.pos.y + direction.y);
+  if(x < row && y < col && x >= 0 && y >= 0){
+    if(boardList[x][y].isEmpty){
+      boardList[x][y].isMovable = true;
+      return;
+    }
+    else if(boardList[x][y].who!=null){
+      Chess killer = who;
+      Chess victim = boardList[x][y].who;
+      if (killer.isFlip && victim.isFlip && killer.team != victim.team) {
+        if ((killer.rank >= victim.rank) && !(killer.rank == 6 && victim.rank == 0)) {
+          // kill the smaller except king cannot kill the smallest
+          victim.eatable = true;
+          return;
+        }
+        else if (killer.rank == 0 && victim.rank == 6) {
+          // kill the king
+          victim.eatable = true;
+          return;   
+        }
+      }
+    }
+  }
+  return;
+}
 boolean chess_movable(boolean team, int rank) {
   for(int i = 0; i < chess_num; i++){
     if(chessList[i].team == team && chessList[i].rank == rank){
